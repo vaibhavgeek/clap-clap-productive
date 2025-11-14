@@ -24,11 +24,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("ClapClap Productive Starting...")
         print("========================================\n")
 
-        // IMPORTANT: For testing, set timer to 5 seconds
+        // IMPORTANT: For testing, set timer to 15 seconds
         // Comment this out for production (default is 2 hours)
         #if DEBUG
-        PreferencesManager.shared.timerInterval = 5.0
-        print("[AppDelegate] DEBUG MODE: Timer set to 5 seconds for testing")
+        PreferencesManager.shared.timerInterval = 15.0
+        print("[AppDelegate] DEBUG MODE: Timer set to 15 seconds for testing")
         #endif
 
         // Initialize services
