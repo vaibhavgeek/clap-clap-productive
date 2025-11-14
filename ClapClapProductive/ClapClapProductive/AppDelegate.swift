@@ -14,6 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var onboardingWindow: NSWindow?
     private var popupWindow: NSWindow?
+    private var currentPopupView: PopupView?
+    private var intervalSettingsWindow: NSWindow?
 
     // MARK: - Application Lifecycle
 
@@ -45,12 +47,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("[AppDelegate] \(selectedApps.count) app(s) configured")
         }
 
-        // Start listening for claps
-        clapDetector.startListening()
-
+        // Note: Microphone will only start when popup appears
         print("\n[AppDelegate] ClapClap Productive ready!")
         print("[AppDelegate] Menu bar icon visible")
-        print("[AppDelegate] Listening for claps (single clap with 0.3s confirmation)...\n")
+        print("[AppDelegate] Clap detection will activate when timer completes\n")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -93,6 +93,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.handleDoubleClap()
         }
 
+        // Weak clap detection callback
+        clapDetector.onWeakClapDetected = { [weak self] in
+            print("\n[AppDelegate] ⚠️ Weak clap detected")
+            self?.currentPopupView?.showWeakClapWarning()
+        }
+
         // Menu bar controller callbacks
         menuBarController.onPreferencesRequested = { [weak self] in
             print("[AppDelegate] Preferences requested")
@@ -102,6 +108,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController.onResetRequested = { [weak self] in
             print("[AppDelegate] Timer reset requested")
             self?.timerManager.resetTimer()
+        }
+
+        menuBarController.onSetIntervalRequested = { [weak self] in
+            print("[AppDelegate] Set interval requested")
+            self?.showIntervalSettings()
         }
     }
 
@@ -144,21 +155,101 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("[AppDelegate] Onboarding window displayed")
     }
 
+    private func showIntervalSettings() {
+        // Close existing interval settings window if any
+        intervalSettingsWindow?.close()
+        intervalSettingsWindow = nil
+
+        // Get current interval
+        let currentInterval = PreferencesManager.shared.timerInterval
+
+        // Create interval settings view with callbacks
+        let contentView = IntervalSettingsView(
+            currentInterval: currentInterval,
+            onSave: { [weak self] (newInterval: TimeInterval) in
+                print("[AppDelegate] Interval updated to \(newInterval)s")
+
+                // Save new interval
+                PreferencesManager.shared.timerInterval = newInterval
+
+                // Reset timer with new interval
+                self?.timerManager.resetTimer()
+
+                // Close window
+                self?.intervalSettingsWindow?.close()
+                self?.intervalSettingsWindow = nil
+
+                // Show confirmation
+                self?.showNotification(
+                    title: "Interval Updated",
+                    message: "Timer interval set to \(self?.formatInterval(newInterval) ?? "")"
+                )
+            },
+            onCancel: { [weak self] in
+                print("[AppDelegate] Interval settings cancelled")
+                self?.intervalSettingsWindow?.close()
+                self?.intervalSettingsWindow = nil
+            }
+        )
+
+        let hostingController = NSHostingController(rootView: contentView)
+
+        // Create window with proper styling
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Set Timer Interval"
+        window.styleMask = [NSWindow.StyleMask.titled, NSWindow.StyleMask.closable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.setFrameAutosaveName("IntervalSettingsWindow")
+        window.makeKeyAndOrderFront(nil)
+        window.level = NSWindow.Level.floating
+
+        // Bring app to front
+        NSApp.activate(ignoringOtherApps: true)
+
+        intervalSettingsWindow = window
+        print("[AppDelegate] Interval settings window displayed")
+    }
+
+    private func formatInterval(_ interval: TimeInterval) -> String {
+        let minutes = Int(interval / 60)
+        if minutes < 60 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s")"
+        } else {
+            let hours = minutes / 60
+            return "\(hours) hour\(hours == 1 ? "" : "s")"
+        }
+    }
+
     private func showClapPopup() {
         // Close existing popup if any
         popupWindow?.close()
         popupWindow = nil
+        currentPopupView = nil
+
+        // START MICROPHONE when popup appears
+        print("[AppDelegate] Starting clap detection for popup")
+        clapDetector.startListening()
 
         // Create popup view with dismiss callback
         let contentView = PopupView(onDismiss: { [weak self] in
             print("[AppDelegate] Popup dismissed")
+
+            // STOP MICROPHONE when popup dismisses
+            print("[AppDelegate] Stopping clap detection")
+            self?.clapDetector.stopListening()
+
             self?.popupWindow?.close()
             self?.popupWindow = nil
+            self?.currentPopupView = nil
 
             // AUTO-RESET: Start next timer cycle for infinite loop
             self?.timerManager.resetTimer()
             print("[AppDelegate] Timer automatically reset for next cycle")
         })
+
+        // Store reference to popup view for weak clap callbacks
+        currentPopupView = contentView
 
         let hostingController = NSHostingController(rootView: contentView)
 
@@ -215,8 +306,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Dismiss popup if showing
         if popupWindow != nil {
+            // STOP MICROPHONE when clap detected
+            print("[AppDelegate] Stopping clap detection")
+            clapDetector.stopListening()
+
             popupWindow?.close()
             popupWindow = nil
+            currentPopupView = nil
             print("[AppDelegate] Popup dismissed")
         }
 

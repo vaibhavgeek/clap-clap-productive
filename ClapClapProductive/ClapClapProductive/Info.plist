@@ -24,5 +24,7 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>ClapClapProductive needs microphone access to detect clap sounds for productivity features.</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
 </dict>
 </plist>

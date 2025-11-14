@@ -13,6 +13,9 @@ class ClapDetector {
     /// Callback invoked when a clap is confirmed (after 0.3-second delay)
     var onDoubleClapDetected: (() -> Void)?
 
+    /// Callback invoked when a weak clap is detected (not strong enough)
+    var onWeakClapDetected: (() -> Void)?
+
     /// Audio engine for capturing microphone input
     private let audioEngine = AVAudioEngine()
 
@@ -245,9 +248,24 @@ class ClapDetector {
 
         let isClapDetected = onsetDetected && ratioCheck
 
+        // Detect "weak clap" - has clap-like transient characteristics but not strong enough
+        // We use a lower threshold (2.5) to identify sounds that are clap-like but weak
+        // This filters out random noise which typically has ratio < 2.0
+        let weakClapThreshold: Float = 2.5
+        let isWeakClap = onsetDetected && !ratioCheck && peakToRMSRatio > weakClapThreshold
+
         // Log when we detect potential clap but not all criteria met
         if onsetDetected && !isClapDetected {
-            print("[ClapDetector] ⚠️ ONSET detected but ratio failed: onset[\(onsetDetected ? "✓" : "✗")] (current=\(String(format: "%.4f", currentEnergy)) > bg=\(String(format: "%.4f", backgroundEnergy))*\(onsetMultiplier)), ratio=\(String(format: "%.2f", peakToRMSRatio))[\(ratioCheck ? "✓" : "✗")] (need >\(peakToRMSThreshold))")
+            if isWeakClap {
+                print("[ClapDetector] ⚠️ WEAK CLAP detected: onset[\(onsetDetected ? "✓" : "✗")] (current=\(String(format: "%.4f", currentEnergy)) > bg=\(String(format: "%.4f", backgroundEnergy))*\(onsetMultiplier)), ratio=\(String(format: "%.2f", peakToRMSRatio))[\(ratioCheck ? "✓" : "✗")] (need >\(peakToRMSThreshold), has >\(weakClapThreshold))")
+
+                // Notify that a weak clap was detected
+                DispatchQueue.main.async { [weak self] in
+                    self?.onWeakClapDetected?()
+                }
+            } else {
+                print("[ClapDetector] ⚠️ ONSET detected but not clap-like: onset[\(onsetDetected ? "✓" : "✗")], ratio=\(String(format: "%.2f", peakToRMSRatio)) (too low, likely noise)")
+            }
         }
 
         if isClapDetected {

@@ -7,9 +7,14 @@ struct PopupView: View {
     @State private var secondsRemaining = 10
     @State private var timer: Timer?
     @State private var pulseAnimation = false
+    @State private var showWeakClapMessage = false
+    @State private var weakClapMessageTimer: Timer?
 
     /// Callback when popup is dismissed
     var onDismiss: (() -> Void)?
+
+    /// Callback to trigger weak clap message
+    var onWeakClapShow: (() -> Void)?
 
     // MARK: - Body
 
@@ -60,6 +65,18 @@ struct PopupView: View {
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
+                }
+
+                // Weak clap warning message
+                if showWeakClapMessage {
+                    Text("You gotta clap harder than that!")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(8)
+                        .transition(.scale.combined(with: .opacity))
                 }
 
                 Spacer()
@@ -119,11 +136,36 @@ struct PopupView: View {
 
     private func dismiss() {
         stopTimer()
+        stopWeakClapTimer()
 
         print("[PopupView] Popup dismissed")
 
         // Call the dismiss callback
         onDismiss?()
+    }
+
+    func showWeakClapWarning() {
+        // Cancel existing timer
+        weakClapMessageTimer?.invalidate()
+
+        // Show message with animation
+        withAnimation {
+            showWeakClapMessage = true
+        }
+
+        print("[PopupView] Showing weak clap warning")
+
+        // Hide message after 2 seconds
+        weakClapMessageTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { _ in
+            withAnimation {
+                self.showWeakClapMessage = false
+            }
+        }
+    }
+
+    private func stopWeakClapTimer() {
+        weakClapMessageTimer?.invalidate()
+        weakClapMessageTimer = nil
     }
 }
 

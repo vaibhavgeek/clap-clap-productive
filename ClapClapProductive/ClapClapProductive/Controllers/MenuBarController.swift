@@ -16,6 +16,9 @@ class MenuBarController: ObservableObject {
     /// Callback for when user requests timer reset
     var onResetRequested: (() -> Void)?
 
+    /// Callback for when user requests to change interval
+    var onSetIntervalRequested: (() -> Void)?
+
     // MARK: - Initialization
 
     init(timerManager: TimerManager) {
@@ -87,56 +90,87 @@ class MenuBarController: ObservableObject {
         return image
     }
 
-    /// Draws recognizable clapping hands icon with progressive fill
-    /// Two hands facing each other with curved palm shapes and fingers
+    /// Draws namaste/prayer hands icon with progressive fill
+    /// Two hands joined together in prayer position
     private func drawClapIcon(in context: CGContext, size: NSSize, fillProgress: Double) {
         let width = size.width
         let height = size.height
-        let strokeWidth: CGFloat = 1.3
+        let strokeWidth: CGFloat = 1.0
+
+        // Clear the background to ensure a clean drawing
+        context.clear(CGRect(origin: .zero, size: size))
 
         // Calculate fill height based on progress (bottom to top)
         let fillHeight = height * CGFloat(fillProgress)
 
-        // LEFT HAND - Palm with curved top representing fingers
+        // MARK: - Left Hand Path (Prayer position - left side)
         let leftHandPath = CGMutablePath()
-        // Start at bottom left
-        leftHandPath.move(to: CGPoint(x: width * 0.15, y: height * 0.15))
-        // Left side of palm
-        leftHandPath.addLine(to: CGPoint(x: width * 0.15, y: height * 0.65))
-        // Thumb curve (left side)
-        leftHandPath.addQuadCurve(
-            to: CGPoint(x: width * 0.20, y: height * 0.75),
-            control: CGPoint(x: width * 0.12, y: height * 0.72)
+
+        // Starting point at bottom center
+        leftHandPath.move(to: CGPoint(x: width * 0.50, y: height * 0.10))
+
+        // Left outer edge going up
+        leftHandPath.addCurve(
+            to: CGPoint(x: width * 0.25, y: height * 0.40),
+            control1: CGPoint(x: width * 0.35, y: height * 0.15),
+            control2: CGPoint(x: width * 0.25, y: height * 0.25)
         )
-        // Fingers as rounded top
-        leftHandPath.addQuadCurve(
-            to: CGPoint(x: width * 0.38, y: height * 0.82),
-            control: CGPoint(x: width * 0.28, y: height * 0.88)
+
+        // Left fingers going up and slightly outward
+        leftHandPath.addCurve(
+            to: CGPoint(x: width * 0.35, y: height * 0.85),
+            control1: CGPoint(x: width * 0.25, y: height * 0.55),
+            control2: CGPoint(x: width * 0.28, y: height * 0.75)
         )
-        // Down to right side of palm
-        leftHandPath.addLine(to: CGPoint(x: width * 0.38, y: height * 0.65))
-        leftHandPath.addLine(to: CGPoint(x: width * 0.30, y: height * 0.15))
+
+        // Fingertips curve back toward center
+        leftHandPath.addCurve(
+            to: CGPoint(x: width * 0.50, y: height * 0.90),
+            control1: CGPoint(x: width * 0.38, y: height * 0.88),
+            control2: CGPoint(x: width * 0.44, y: height * 0.90)
+        )
+
+        // Inner edge coming back down
+        leftHandPath.addCurve(
+            to: CGPoint(x: width * 0.50, y: height * 0.10),
+            control1: CGPoint(x: width * 0.47, y: height * 0.60),
+            control2: CGPoint(x: width * 0.48, y: height * 0.30)
+        )
         leftHandPath.closeSubpath()
 
-        // RIGHT HAND - Mirrored palm with curved top
+        // MARK: - Right Hand Path (Prayer position - right side)
         let rightHandPath = CGMutablePath()
-        // Start at bottom right
-        rightHandPath.move(to: CGPoint(x: width * 0.85, y: height * 0.15))
-        // Right side of palm
-        rightHandPath.addLine(to: CGPoint(x: width * 0.85, y: height * 0.65))
-        // Thumb curve (right side)
-        rightHandPath.addQuadCurve(
-            to: CGPoint(x: width * 0.80, y: height * 0.75),
-            control: CGPoint(x: width * 0.88, y: height * 0.72)
+
+        // Starting point at bottom center
+        rightHandPath.move(to: CGPoint(x: width * 0.50, y: height * 0.10))
+
+        // Right outer edge going up
+        rightHandPath.addCurve(
+            to: CGPoint(x: width * 0.75, y: height * 0.40),
+            control1: CGPoint(x: width * 0.65, y: height * 0.15),
+            control2: CGPoint(x: width * 0.75, y: height * 0.25)
         )
-        // Fingers as rounded top (mirrored)
-        rightHandPath.addQuadCurve(
-            to: CGPoint(x: width * 0.62, y: height * 0.82),
-            control: CGPoint(x: width * 0.72, y: height * 0.88)
+
+        // Right fingers going up and slightly outward
+        rightHandPath.addCurve(
+            to: CGPoint(x: width * 0.65, y: height * 0.85),
+            control1: CGPoint(x: width * 0.75, y: height * 0.55),
+            control2: CGPoint(x: width * 0.72, y: height * 0.75)
         )
-        // Down to left side of palm
-        rightHandPath.addLine(to: CGPoint(x: width * 0.62, y: height * 0.65))
-        rightHandPath.addLine(to: CGPoint(x: width * 0.70, y: height * 0.15))
+
+        // Fingertips curve back toward center
+        rightHandPath.addCurve(
+            to: CGPoint(x: width * 0.50, y: height * 0.90),
+            control1: CGPoint(x: width * 0.62, y: height * 0.88),
+            control2: CGPoint(x: width * 0.56, y: height * 0.90)
+        )
+
+        // Inner edge coming back down
+        rightHandPath.addCurve(
+            to: CGPoint(x: width * 0.50, y: height * 0.10),
+            control1: CGPoint(x: width * 0.53, y: height * 0.60),
+            control2: CGPoint(x: width * 0.52, y: height * 0.30)
+        )
         rightHandPath.closeSubpath()
 
         // Draw hand outlines (always visible)
@@ -169,7 +203,6 @@ class MenuBarController: ObservableObject {
             context.restoreGState()
         }
     }
-
     // MARK: - Menu Setup
 
     private func setupMenu() {
@@ -186,6 +219,11 @@ class MenuBarController: ObservableObject {
         let resetItem = NSMenuItem(title: "Reset Timer", action: #selector(resetTimerClicked), keyEquivalent: "r")
         resetItem.target = self
         menu.addItem(resetItem)
+
+        // Set Interval
+        let intervalItem = NSMenuItem(title: "Set Interval...", action: #selector(setIntervalClicked), keyEquivalent: "i")
+        intervalItem.target = self
+        menu.addItem(intervalItem)
 
         // Preferences (reopens onboarding)
         let preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(preferencesClicked), keyEquivalent: ",")
@@ -216,6 +254,11 @@ class MenuBarController: ObservableObject {
     @objc private func resetTimerClicked() {
         print("[MenuBarController] Reset timer requested")
         onResetRequested?()
+    }
+
+    @objc private func setIntervalClicked() {
+        print("[MenuBarController] Set interval requested")
+        onSetIntervalRequested?()
     }
 
     @objc private func preferencesClicked() {

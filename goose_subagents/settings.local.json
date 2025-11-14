@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p ClapClapProductive/ClapClapProductive)",
+      "Bash(python3 -c \"import PIL; print(''Pillow installed'')\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
